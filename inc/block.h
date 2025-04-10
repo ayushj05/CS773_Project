@@ -51,6 +51,12 @@ class BLOCK {
     };
 };
 
+// SUBCACHE BLOCK
+struct SBLOCK {
+    uint8_t IDID;
+    BLOCK* block;
+};
+
 // DRAM CACHE BLOCK
 class DRAM_ARRAY {
   public:

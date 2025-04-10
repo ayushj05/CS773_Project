@@ -77,14 +77,16 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_PQ_SIZE NUM_CPUS*32
 #define LLC_MSHR_SIZE NUM_CPUS*64
 #define LLC_LATENCY 20  // 4/5 (L1I or L1D) + 10 + 20 = 34/35 cycles
+#define LLC_SUBCACHE_SIZE LLC_SET
 
 class CACHE : public MEMORY {
   public:
     uint32_t cpu;
     const string NAME;
-    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE;
+    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE, SUBCACHE_SIZE;
     uint32_t LATENCY;
     BLOCK **block;
+    SBLOCK *subcache;
     int fill_level;
     uint32_t MAX_READ, MAX_FILL;
     uint32_t reads_available_this_cycle;
@@ -114,18 +116,25 @@ class CACHE : public MEMORY {
     uint64_t total_miss_latency;
     
     // constructor
-    CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) 
-        : NAME(v1), NUM_SET(v2), NUM_WAY(v3), NUM_LINE(v4), WQ_SIZE(v5), RQ_SIZE(v6), PQ_SIZE(v7), MSHR_SIZE(v8) {
+    CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8, uint32_t v9 = 0) 
+        : NAME(v1), NUM_SET(v2), NUM_WAY(v3), NUM_LINE(v4), WQ_SIZE(v5), RQ_SIZE(v6), PQ_SIZE(v7), MSHR_SIZE(v8), SUBCACHE_SIZE(v9) {
 
         LATENCY = 0;
 
         // cache block
         block = new BLOCK* [NUM_SET];
+        subcache = new SBLOCK [SUBCACHE_SIZE];
+        
         for (uint32_t i=0; i<NUM_SET; i++) {
             block[i] = new BLOCK[NUM_WAY]; 
 
             for (uint32_t j=0; j<NUM_WAY; j++) {
                 block[i][j].lru = j;
+            }
+            
+            uint32_t subcache_ways_per_set = min(NUM_WAY, SUBCACHE_SIZE / NUM_SET);
+            for (uint32_t j = 0; j < subcache_ways_per_set; j++) {
+                subcache[i * subcache_ways_per_set + j] = SBLOCK{0, block[i] + j};
             }
         }
 
@@ -163,6 +172,7 @@ class CACHE : public MEMORY {
         for (uint32_t i=0; i<NUM_SET; i++)
             delete[] block[i];
         delete[] block;
+        delete[] subcache;
     };
 
     // functions
