@@ -11,7 +11,8 @@ class BLOCK {
     uint8_t valid,
             prefetch,
             dirty,
-            used;
+            used,
+            IDID;
 
     int delta,
         depth,
@@ -49,12 +50,6 @@ class BLOCK {
 
         lru = 0;
     };
-};
-
-// SUBCACHE BLOCK
-struct SBLOCK {
-    uint8_t IDID;
-    BLOCK* block;
 };
 
 // DRAM CACHE BLOCK

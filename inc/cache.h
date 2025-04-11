@@ -86,7 +86,6 @@ class CACHE : public MEMORY {
     const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE, SUBCACHE_SIZE;
     uint32_t LATENCY;
     BLOCK **block;
-    SBLOCK *subcache;
     int fill_level;
     uint32_t MAX_READ, MAX_FILL;
     uint32_t reads_available_this_cycle;
@@ -123,18 +122,12 @@ class CACHE : public MEMORY {
 
         // cache block
         block = new BLOCK* [NUM_SET];
-        subcache = new SBLOCK [SUBCACHE_SIZE];
         
         for (uint32_t i=0; i<NUM_SET; i++) {
             block[i] = new BLOCK[NUM_WAY]; 
 
             for (uint32_t j=0; j<NUM_WAY; j++) {
                 block[i][j].lru = j;
-            }
-            
-            uint32_t subcache_ways_per_set = min(NUM_WAY, SUBCACHE_SIZE / NUM_SET);
-            for (uint32_t j = 0; j < subcache_ways_per_set; j++) {
-                subcache[i * subcache_ways_per_set + j] = SBLOCK{0, block[i] + j};
             }
         }
 
@@ -172,7 +165,6 @@ class CACHE : public MEMORY {
         for (uint32_t i=0; i<NUM_SET; i++)
             delete[] block[i];
         delete[] block;
-        delete[] subcache;
     };
 
     // functions
