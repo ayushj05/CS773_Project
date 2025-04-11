@@ -3,6 +3,16 @@
 
 uint64_t l2pf_access = 0;
 
+uint32_t secure_addr_lb[NUM_CPUS] = {0, 0};
+uint32_t secure_addr_ub[NUM_CPUS] = {0, 0};
+
+uint8_t get_idid (uint32_t address, uint32_t cpu) {
+    if (secure_addr_lb[cpu] <= address && address <= secure_addr_ub[cpu]) {
+        return (cpu << 7) + 1;
+    }
+    return 0;
+}
+
 void CACHE::handle_fill()
 {
     // handle fill
@@ -20,9 +30,10 @@ void CACHE::handle_fill()
         uint32_t mshr_index = MSHR.next_fill_index;
 
         // find victim
-        uint32_t set = get_set(MSHR.entry[mshr_index].address), way;
+        uint8_t IDID = get_idid(MSHR.entry[mshr_index].address, fill_cpu);
+        uint32_t set = get_set(MSHR.entry[mshr_index].address, IDID, false), way;
         if (cache_type == IS_LLC) {
-            way = llc_find_victim(fill_cpu, MSHR.entry[mshr_index].instr_id, set, block[set], MSHR.entry[mshr_index].ip, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].type);
+            way = llc_find_victim(fill_cpu, MSHR.entry[mshr_index].instr_id, set, block[set], MSHR.entry[mshr_index].ip, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].type, IDID);
         }
         else
             way = find_victim(fill_cpu, MSHR.entry[mshr_index].instr_id, set, block[set], MSHR.entry[mshr_index].ip, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].type);
@@ -237,7 +248,8 @@ void CACHE::handle_writeback()
         int index = WQ.head;
 
         // access cache
-        uint32_t set = get_set(WQ.entry[index].address);
+        uint8_t IDID = get_idid(WQ.entry[index].address, writeback_cpu);
+        uint32_t set = get_set(WQ.entry[index].address, IDID, true);
         int way = check_hit(&WQ.entry[index]);
         
         if (way >= 0) { // writeback hit (or RFO hit for L1D)
@@ -396,9 +408,10 @@ void CACHE::handle_writeback()
             }
             else {
                 // find victim
-                uint32_t set = get_set(WQ.entry[index].address), way;
+                IDID = get_idid(WQ.entry[index].address, writeback_cpu);
+                uint32_t set = get_set(WQ.entry[index].address, IDID, false), way;
                 if (cache_type == IS_LLC) {
-                    way = llc_find_victim(writeback_cpu, WQ.entry[index].instr_id, set, block[set], WQ.entry[index].ip, WQ.entry[index].full_addr, WQ.entry[index].type);
+                    way = llc_find_victim(writeback_cpu, WQ.entry[index].instr_id, set, block[set], WQ.entry[index].ip, WQ.entry[index].full_addr, WQ.entry[index].type, IDID);
                 }
                 else
                     way = find_victim(writeback_cpu, WQ.entry[index].instr_id, set, block[set], WQ.entry[index].ip, WQ.entry[index].full_addr, WQ.entry[index].type);
@@ -535,7 +548,8 @@ void CACHE::handle_read()
             int index = RQ.head;
 
             // access cache
-            uint32_t set = get_set(RQ.entry[index].address);
+            uint8_t IDID = get_idid(RQ.entry[index].address, read_cpu);
+            uint32_t set = get_set(RQ.entry[index].address, IDID, true);
             int way = check_hit(&RQ.entry[index]);
             
             if (way >= 0) { // read hit
@@ -838,7 +852,8 @@ void CACHE::handle_prefetch()
             int index = PQ.head;
 
             // access cache
-            uint32_t set = get_set(PQ.entry[index].address);
+            uint8_t IDID = get_idid(PQ.entry[index].address, prefetch_cpu);
+            uint32_t set = get_set(PQ.entry[index].address, IDID, true);
             int way = check_hit(&PQ.entry[index]);
             
             if (way >= 0) { // prefetch hit
@@ -1053,9 +1068,23 @@ void CACHE::operate()
         handle_prefetch();
 }
 
-uint32_t CACHE::get_set(uint64_t address)
+uint32_t CACHE::get_set(uint64_t address, uint8_t IDID, bool lookup)
 {
-    return (uint32_t) (address & ((1 << lg2(NUM_SET)) - 1)); 
+    if (IDID == 0) {
+        return (uint32_t) (address & ((1 << lg2(NUM_SET)) - 1)); 
+    }
+    
+    if (lookup) {
+        for (uint32_t set = 0; set < NUM_SET; set++) {
+            for (uint32_t way = 0; way < SUBCACHE_WAYS_PER_SET; way++) {
+                if (block[set][way].valid && (block[set][way].IDID == IDID) && (block[set][way].tag == address)) {
+                    return set;
+                }
+            }
+        }
+    }
+    
+    return (rand() % NUM_SET);
 }
 
 uint32_t CACHE::get_way(uint64_t address, uint32_t set)
@@ -1110,6 +1139,7 @@ void CACHE::fill_cache(uint32_t set, uint32_t way, PACKET *packet)
     block[set][way].ip = packet->ip;
     block[set][way].cpu = packet->cpu;
     block[set][way].instr_id = packet->instr_id;
+    block[set][way].IDID = get_idid(packet->address, packet->cpu);
 
     DP ( if (warmup_complete[packet->cpu]) {
     cout << "[" << NAME << "] " << __func__ << " set: " << set << " way: " << way;
@@ -1119,7 +1149,8 @@ void CACHE::fill_cache(uint32_t set, uint32_t way, PACKET *packet)
 
 int CACHE::check_hit(PACKET *packet)
 {
-    uint32_t set = get_set(packet->address);
+    uint8_t IDID = get_idid(packet->address, packet->cpu);
+    uint32_t set = get_set(packet->address, IDID, true);
     int match_way = -1;
 
     if (NUM_SET < set) {
@@ -1130,8 +1161,9 @@ int CACHE::check_hit(PACKET *packet)
     }
 
     // hit
-    for (uint32_t way=0; way<NUM_WAY; way++) {
-        if (block[set][way].valid && (block[set][way].tag == packet->address)) {
+    uint32_t num_ways_to_check = (IDID == 0) ? NUM_WAY : SUBCACHE_WAYS_PER_SET;
+    for (uint32_t way=0; way<num_ways_to_check; way++) {
+        if (block[set][way].valid && (block[set][way].tag == packet->address) && ((IDID == 0) || (IDID == block[set][way].IDID))) {
 
             match_way = way;
 
@@ -1148,9 +1180,10 @@ int CACHE::check_hit(PACKET *packet)
     return match_way;
 }
 
-int CACHE::invalidate_entry(uint64_t inval_addr)
+int CACHE::invalidate_entry(uint64_t inval_addr, uint32_t cpu)
 {
-    uint32_t set = get_set(inval_addr);
+    uint8_t IDID = get_idid(inval_addr, cpu);
+    uint32_t set = get_set(inval_addr, IDID, true);
     int match_way = -1;
 
     if (NUM_SET < set) {
@@ -1160,8 +1193,9 @@ int CACHE::invalidate_entry(uint64_t inval_addr)
     }
 
     // invalidate
-    for (uint32_t way=0; way<NUM_WAY; way++) {
-        if (block[set][way].valid && (block[set][way].tag == inval_addr)) {
+    uint32_t num_ways_to_check = (IDID == 0) ? NUM_WAY : SUBCACHE_WAYS_PER_SET;
+    for (uint32_t way=0; way<num_ways_to_check; way++) {
+        if (block[set][way].valid && (block[set][way].tag == inval_addr) && ((IDID == 0) || (IDID == block[set][way].IDID))) {
 
             block[set][way].valid = 0;
 

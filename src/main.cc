@@ -377,15 +377,15 @@ uint64_t va_to_pa(uint32_t cpu, uint64_t instr_id, uint64_t va, uint64_t unique_
             page_queue.push(vpage);
 
             // invalidate corresponding vpage and ppage from the cache hierarchy
-            ooo_cpu[cpu].ITLB.invalidate_entry(NRU_vpage);
-            ooo_cpu[cpu].DTLB.invalidate_entry(NRU_vpage);
-            ooo_cpu[cpu].STLB.invalidate_entry(NRU_vpage);
+            ooo_cpu[cpu].ITLB.invalidate_entry(NRU_vpage, cpu);
+            ooo_cpu[cpu].DTLB.invalidate_entry(NRU_vpage, cpu);
+            ooo_cpu[cpu].STLB.invalidate_entry(NRU_vpage, cpu);
             for (uint32_t i=0; i<BLOCK_SIZE; i++) {
                 uint64_t cl_addr = (mapped_ppage << 6) | i;
-                ooo_cpu[cpu].L1I.invalidate_entry(cl_addr);
-                ooo_cpu[cpu].L1D.invalidate_entry(cl_addr);
-                ooo_cpu[cpu].L2C.invalidate_entry(cl_addr);
-                uncore.LLC.invalidate_entry(cl_addr);
+                ooo_cpu[cpu].L1I.invalidate_entry(cl_addr, cpu);
+                ooo_cpu[cpu].L1D.invalidate_entry(cl_addr, cpu);
+                ooo_cpu[cpu].L2C.invalidate_entry(cl_addr, cpu);
+                uncore.LLC.invalidate_entry(cl_addr, cpu);
             }
 
             // swap complete

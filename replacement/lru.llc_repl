@@ -7,10 +7,14 @@ void CACHE::llc_initialize_replacement()
 }
 
 // find replacement victim
-uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
+uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type, uint8_t IDID)
 {
-    // baseline LRU
-    return lru_victim(cpu, instr_id, set, current_set, ip, full_addr, type); 
+    if (IDID == 0) {
+        // baseline LRU
+        return lru_victim(cpu, instr_id, set, current_set, ip, full_addr, type); 
+    }
+    
+    return (rand() % SUBCACHE_WAYS_PER_SET);
 }
 
 // called on every cache hit and cache fill

@@ -77,13 +77,15 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_PQ_SIZE NUM_CPUS*32
 #define LLC_MSHR_SIZE NUM_CPUS*64
 #define LLC_LATENCY 20  // 4/5 (L1I or L1D) + 10 + 20 = 34/35 cycles
-#define LLC_SUBCACHE_SIZE LLC_SET
+#define LLC_SUBCACHE_WAYS_PER_SET 1
+
+uint8_t get_idid (uint32_t address, uint32_t cpu);
 
 class CACHE : public MEMORY {
   public:
     uint32_t cpu;
     const string NAME;
-    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE, SUBCACHE_SIZE;
+    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE, SUBCACHE_WAYS_PER_SET;
     uint32_t LATENCY;
     BLOCK **block;
     int fill_level;
@@ -116,7 +118,7 @@ class CACHE : public MEMORY {
     
     // constructor
     CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8, uint32_t v9 = 0) 
-        : NAME(v1), NUM_SET(v2), NUM_WAY(v3), NUM_LINE(v4), WQ_SIZE(v5), RQ_SIZE(v6), PQ_SIZE(v7), MSHR_SIZE(v8), SUBCACHE_SIZE(v9) {
+        : NAME(v1), NUM_SET(v2), NUM_WAY(v3), NUM_LINE(v4), WQ_SIZE(v5), RQ_SIZE(v6), PQ_SIZE(v7), MSHR_SIZE(v8), SUBCACHE_WAYS_PER_SET(v9) {
 
         LATENCY = 0;
 
@@ -180,7 +182,7 @@ class CACHE : public MEMORY {
              get_size(uint8_t queue_type, uint64_t address);
 
     int  check_hit(PACKET *packet),
-         invalidate_entry(uint64_t inval_addr),
+         invalidate_entry(uint64_t inval_addr, uint32_t cpu),
          check_mshr(PACKET *packet),
          prefetch_line(uint64_t ip, uint64_t base_addr, uint64_t pf_addr, int prefetch_fill_level, uint32_t prefetch_metadata),
          kpc_prefetch_line(uint64_t base_addr, uint64_t pf_addr, int prefetch_fill_level, int delta, int depth, int signature, int confidence, uint32_t prefetch_metadata);
@@ -219,10 +221,10 @@ class CACHE : public MEMORY {
          l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in),
          llc_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in);
     
-    uint32_t get_set(uint64_t address),
+    uint32_t get_set(uint64_t address, uint8_t IDID, bool lookup),
              get_way(uint64_t address, uint32_t set),
              find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type),
-             llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type),
+             llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type, uint8_t IDID),
              lru_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type);
 };
 
