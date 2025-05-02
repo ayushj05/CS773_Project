@@ -31,6 +31,10 @@ void record_roi_stats(uint32_t cpu, CACHE *cache)
         cache->roi_access[cpu][i] = cache->sim_access[cpu][i];
         cache->roi_hit[cpu][i] = cache->sim_hit[cpu][i];
         cache->roi_miss[cpu][i] = cache->sim_miss[cpu][i];
+        
+        cache->subcache_roi_access[cpu][i] = cache->subcache_sim_access[cpu][i];
+        cache->subcache_roi_hit[cpu][i] = cache->subcache_sim_hit[cpu][i];
+        cache->subcache_roi_miss[cpu][i] = cache->subcache_sim_miss[cpu][i];
     }
 }
 
@@ -42,6 +46,14 @@ void print_roi_stats(uint32_t cpu, CACHE *cache)
         TOTAL_ACCESS += cache->roi_access[cpu][i];
         TOTAL_HIT += cache->roi_hit[cpu][i];
         TOTAL_MISS += cache->roi_miss[cpu][i];
+    }
+    
+    uint64_t SUBCACHE_TOTAL_ACCESS = 0, SUBCACHE_TOTAL_HIT = 0, SUBCACHE_TOTAL_MISS = 0;
+
+    for (uint32_t i=0; i<NUM_TYPES; i++) {
+        SUBCACHE_TOTAL_ACCESS += cache->subcache_roi_access[cpu][i];
+        SUBCACHE_TOTAL_HIT += cache->subcache_roi_hit[cpu][i];
+        SUBCACHE_TOTAL_MISS += cache->subcache_roi_miss[cpu][i];
     }
 
     cout << cache->NAME;
@@ -66,6 +78,21 @@ void print_roi_stats(uint32_t cpu, CACHE *cache)
     cout << cache->NAME;
     cout << " AVERAGE MISS LATENCY: " << (1.0*(cache->total_miss_latency))/TOTAL_MISS << " cycles" << endl;
     //cout << " AVERAGE MISS LATENCY: " << (cache->total_miss_latency)/TOTAL_MISS << " cycles " << cache->total_miss_latency << "/" << TOTAL_MISS<< endl;
+    
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " TOTAL     ACCESS: " << setw(10) << SUBCACHE_TOTAL_ACCESS << "  HIT: " << setw(10) << SUBCACHE_TOTAL_HIT << "  MISS: " << setw(10) << SUBCACHE_TOTAL_MISS << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " LOAD      ACCESS: " << setw(10) << cache->subcache_roi_access[cpu][0] << "  HIT: " << setw(10) << cache->subcache_roi_hit[cpu][0] << "  MISS: " << setw(10) << cache->subcache_roi_miss[cpu][0] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " RFO       ACCESS: " << setw(10) << cache->subcache_roi_access[cpu][1] << "  HIT: " << setw(10) << cache->subcache_roi_hit[cpu][1] << "  MISS: " << setw(10) << cache->subcache_roi_miss[cpu][1] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " PREFETCH  ACCESS: " << setw(10) << cache->subcache_roi_access[cpu][2] << "  HIT: " << setw(10) << cache->subcache_roi_hit[cpu][2] << "  MISS: " << setw(10) << cache->subcache_roi_miss[cpu][2] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " WRITEBACK ACCESS: " << setw(10) << cache->subcache_roi_access[cpu][3] << "  HIT: " << setw(10) << cache->subcache_roi_hit[cpu][3] << "  MISS: " << setw(10) << cache->subcache_roi_miss[cpu][3] << endl;
 }
 
 void print_sim_stats(uint32_t cpu, CACHE *cache)
@@ -76,6 +103,14 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
         TOTAL_ACCESS += cache->sim_access[cpu][i];
         TOTAL_HIT += cache->sim_hit[cpu][i];
         TOTAL_MISS += cache->sim_miss[cpu][i];
+    }
+    
+    uint64_t SUBCACHE_TOTAL_ACCESS = 0, SUBCACHE_TOTAL_HIT = 0, SUBCACHE_TOTAL_MISS = 0;
+
+    for (uint32_t i=0; i<NUM_TYPES; i++) {
+        SUBCACHE_TOTAL_ACCESS += cache->subcache_sim_access[cpu][i];
+        SUBCACHE_TOTAL_HIT += cache->subcache_sim_hit[cpu][i];
+        SUBCACHE_TOTAL_MISS += cache->subcache_sim_miss[cpu][i];
     }
 
     cout << cache->NAME;
@@ -92,6 +127,21 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
 
     cout << cache->NAME;
     cout << " WRITEBACK ACCESS: " << setw(10) << cache->sim_access[cpu][3] << "  HIT: " << setw(10) << cache->sim_hit[cpu][3] << "  MISS: " << setw(10) << cache->sim_miss[cpu][3] << endl;
+    
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " TOTAL     ACCESS: " << setw(10) << SUBCACHE_TOTAL_ACCESS << "  HIT: " << setw(10) << SUBCACHE_TOTAL_HIT << "  MISS: " << setw(10) << SUBCACHE_TOTAL_MISS << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " LOAD      ACCESS: " << setw(10) << cache->subcache_sim_access[cpu][0] << "  HIT: " << setw(10) << cache->subcache_sim_hit[cpu][0] << "  MISS: " << setw(10) << cache->subcache_sim_miss[cpu][0] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " RFO       ACCESS: " << setw(10) << cache->subcache_sim_access[cpu][1] << "  HIT: " << setw(10) << cache->subcache_sim_hit[cpu][1] << "  MISS: " << setw(10) << cache->subcache_sim_miss[cpu][1] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " PREFETCH  ACCESS: " << setw(10) << cache->subcache_sim_access[cpu][2] << "  HIT: " << setw(10) << cache->subcache_sim_hit[cpu][2] << "  MISS: " << setw(10) << cache->subcache_sim_miss[cpu][2] << endl;
+
+    cout << "SUBCACHE " << cache->NAME;
+    cout << " WRITEBACK ACCESS: " << setw(10) << cache->subcache_sim_access[cpu][3] << "  HIT: " << setw(10) << cache->subcache_sim_hit[cpu][3] << "  MISS: " << setw(10) << cache->subcache_sim_miss[cpu][3] << endl;
 }
 
 void print_branch_stats()
@@ -148,6 +198,10 @@ void reset_cache_stats(uint32_t cpu, CACHE *cache)
         cache->sim_access[cpu][i] = 0;
         cache->sim_hit[cpu][i] = 0;
         cache->sim_miss[cpu][i] = 0;
+        
+        cache->subcache_sim_access[cpu][i] = 0;
+        cache->subcache_sim_hit[cpu][i] = 0;
+        cache->subcache_sim_miss[cpu][i] = 0;
     }
 
     cache->total_miss_latency = 0;

@@ -3,8 +3,8 @@
 
 uint64_t l2pf_access = 0;
 
-uint32_t secure_addr_lb[NUM_CPUS] = {0, 0};
-uint32_t secure_addr_ub[NUM_CPUS] = {0, 0};
+uint32_t secure_addr_lb[NUM_CPUS] = {226039424, 226039424};
+uint32_t secure_addr_ub[NUM_CPUS] = {226047679, 226047679};
 
 uint8_t get_idid (uint32_t address, uint32_t cpu) {
     if (secure_addr_lb[cpu] <= address && address <= secure_addr_ub[cpu]) {
@@ -50,8 +50,14 @@ void CACHE::handle_fill()
                 update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, 0, MSHR.entry[mshr_index].type, 0);
 
             // COLLECT STATS
-            sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
-            sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            if (IDID == 0) {
+                sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
+                sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            }
+            else {
+                subcache_sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
+                subcache_sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            }
 
             // check fill level
             if (MSHR.entry[mshr_index].fill_level < fill_level) {
@@ -161,8 +167,14 @@ void CACHE::handle_fill()
                 update_replacement_state(fill_cpu, set, way, MSHR.entry[mshr_index].full_addr, MSHR.entry[mshr_index].ip, block[set][way].full_addr, MSHR.entry[mshr_index].type, 0);
 
             // COLLECT STATS
-            sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
-            sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            if (IDID == 0) {
+                sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
+                sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            }
+            else {
+                subcache_sim_miss[fill_cpu][MSHR.entry[mshr_index].type]++;
+                subcache_sim_access[fill_cpu][MSHR.entry[mshr_index].type]++;
+            }
 
             fill_cache(set, way, &MSHR.entry[mshr_index]);
 
@@ -262,8 +274,14 @@ void CACHE::handle_writeback()
                 update_replacement_state(writeback_cpu, set, way, block[set][way].full_addr, WQ.entry[index].ip, 0, WQ.entry[index].type, 1);
 
             // COLLECT STATS
-            sim_hit[writeback_cpu][WQ.entry[index].type]++;
-            sim_access[writeback_cpu][WQ.entry[index].type]++;
+            if (IDID == 0) {
+                sim_hit[writeback_cpu][WQ.entry[index].type]++;
+                sim_access[writeback_cpu][WQ.entry[index].type]++;
+            }
+            else {
+                subcache_sim_hit[writeback_cpu][WQ.entry[index].type]++;
+                subcache_sim_access[writeback_cpu][WQ.entry[index].type]++;
+            }
 
             // mark dirty
             block[set][way].dirty = 1;
@@ -492,8 +510,14 @@ void CACHE::handle_writeback()
                         update_replacement_state(writeback_cpu, set, way, WQ.entry[index].full_addr, WQ.entry[index].ip, block[set][way].full_addr, WQ.entry[index].type, 0);
 
                     // COLLECT STATS
-                    sim_miss[writeback_cpu][WQ.entry[index].type]++;
-                    sim_access[writeback_cpu][WQ.entry[index].type]++;
+                    if (IDID == 0) {
+                        sim_miss[writeback_cpu][WQ.entry[index].type]++;
+                        sim_access[writeback_cpu][WQ.entry[index].type]++;
+                    }
+                    else {
+                        subcache_sim_miss[writeback_cpu][WQ.entry[index].type]++;
+                        subcache_sim_access[writeback_cpu][WQ.entry[index].type]++;
+                    }
 
                     fill_cache(set, way, &WQ.entry[index]);
 
@@ -601,8 +625,14 @@ void CACHE::handle_read()
                     update_replacement_state(read_cpu, set, way, block[set][way].full_addr, RQ.entry[index].ip, 0, RQ.entry[index].type, 1);
 
                 // COLLECT STATS
-                sim_hit[read_cpu][RQ.entry[index].type]++;
-                sim_access[read_cpu][RQ.entry[index].type]++;
+                if (IDID == 0) {
+                    sim_hit[read_cpu][RQ.entry[index].type]++;
+                    sim_access[read_cpu][RQ.entry[index].type]++;
+                }
+                else {
+                    subcache_sim_hit[read_cpu][RQ.entry[index].type]++;
+                    subcache_sim_access[read_cpu][RQ.entry[index].type]++;
+                }
 
                 // check fill level
                 if (RQ.entry[index].fill_level < fill_level) {
@@ -867,8 +897,14 @@ void CACHE::handle_prefetch()
                     update_replacement_state(prefetch_cpu, set, way, block[set][way].full_addr, PQ.entry[index].ip, 0, PQ.entry[index].type, 1);
 
                 // COLLECT STATS
-                sim_hit[prefetch_cpu][PQ.entry[index].type]++;
-                sim_access[prefetch_cpu][PQ.entry[index].type]++;
+                if (IDID == 0) {
+                    sim_hit[prefetch_cpu][PQ.entry[index].type]++;
+                    sim_access[prefetch_cpu][PQ.entry[index].type]++;
+                }
+                else {
+                    subcache_sim_hit[prefetch_cpu][PQ.entry[index].type]++;
+                    subcache_sim_access[prefetch_cpu][PQ.entry[index].type]++;
+                }
 
 		// run prefetcher on prefetches from higher caches
 		if(PQ.entry[index].pf_origin_level < fill_level)

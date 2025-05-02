@@ -85,11 +85,11 @@ class CACHE : public MEMORY {
   public:
     uint32_t cpu;
     const string NAME;
-    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE, SUBCACHE_WAYS_PER_SET;
+    const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE;
     uint32_t LATENCY;
     BLOCK **block;
     int fill_level;
-    uint32_t MAX_READ, MAX_FILL;
+    uint32_t MAX_READ, MAX_FILL, SUBCACHE_WAYS_PER_SET;
     uint32_t reads_available_this_cycle;
     uint8_t cache_type;
 
@@ -113,6 +113,13 @@ class CACHE : public MEMORY {
              roi_access[NUM_CPUS][NUM_TYPES],
              roi_hit[NUM_CPUS][NUM_TYPES],
              roi_miss[NUM_CPUS][NUM_TYPES];
+    
+    uint64_t subcache_sim_access[NUM_CPUS][NUM_TYPES],
+             subcache_sim_hit[NUM_CPUS][NUM_TYPES],
+             subcache_sim_miss[NUM_CPUS][NUM_TYPES],
+             subcache_roi_access[NUM_CPUS][NUM_TYPES],
+             subcache_roi_hit[NUM_CPUS][NUM_TYPES],
+             subcache_roi_miss[NUM_CPUS][NUM_TYPES];
 
     uint64_t total_miss_latency;
     
@@ -144,6 +151,13 @@ class CACHE : public MEMORY {
                 roi_access[i][j] = 0;
                 roi_hit[i][j] = 0;
                 roi_miss[i][j] = 0;
+                
+                subcache_sim_access[i][j] = 0;
+                subcache_sim_hit[i][j] = 0;
+                subcache_sim_miss[i][j] = 0;
+                subcache_roi_access[i][j] = 0;
+                subcache_roi_hit[i][j] = 0;
+                subcache_roi_miss[i][j] = 0;
             }
         }
 
