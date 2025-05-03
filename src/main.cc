@@ -812,7 +812,10 @@ int main(int argc, char** argv)
 
     uncore.LLC.llc_initialize_replacement();
     uncore.LLC.llc_prefetcher_initialize();
-
+    
+    // The below values ensure that the value of SUBCACHE_WAYS_PER_SET increments to 2 or 3 at the start, so that we get a gradient value
+    double prev_crit_miss_perc[NUM_CPUS] = {100}, prev_noncrit_miss_perc[NUM_CPUS] = {100};
+    
     // simulation entry point
     start_time = time(NULL);
     uint8_t run_simulation = 1;
@@ -930,6 +933,45 @@ int main(int argc, char** argv)
                 record_roi_stats(i, &uncore.LLC);
 
                 all_simulation_complete++;
+                
+                // int crit_miss_perc[NUM_CPUS] = {0}, noncrit_miss_perc[NUM_CPUS] = {0};
+                // for (int i = 0; i < NUM_CPUS; i++) {
+                //     crit_miss_perc[i] = (subcache_sim_miss[i] / (double) subcache_sim_access[i]) * 100;
+                //     noncrit_miss_perc[i] = (sim_miss[i] / (double) sim_access[i]) * 100;
+                // }
+                // int avg_crit_miss_perc = 0, avg_noncrit_miss_perc = 0;
+                // for (int i = 0; i < NUM_CPUS; i++) {
+                //     avg_crit_miss_perc += crit_miss_perc[i];
+                //     avg_noncrit_miss_perc += noncrit_miss_perc[i];
+                // }
+                // avg_crit_miss_perc /= NUM_CPUS;
+                // avg_noncrit_miss_perc /= NUM_CPUS;
+                // if ((avg_crit_miss_perc - prev_avg_crit_miss_perc) + 500 * (avg_noncrit_miss_perc - prev_avg_noncrit_miss_perc) > 1) {
+                //     uncore.LLC.decrease_subcache_size();
+                // }
+                // else if ((avg_crit_miss_perc - prev_avg_crit_miss_perc) + 500 * (avg_noncrit_miss_perc - prev_avg_noncrit_miss_perc) < -1) {
+                //     uncore.LLC.increase_subcache_size();
+                // }
+                // prev_avg_crit_miss_perc = avg_crit_miss_perc;
+                // prev_avg_noncrit_miss_perc = avg_noncrit_miss_perc;
+                double total_subcache_sim_miss = 0, total_sim_miss = 0, total_subcache_sim_access = 0, total_sim_access = 0;
+                for (uint32_t j=0; j<NUM_TYPES; j++) {
+                    total_subcache_sim_miss += uncore.LLC.subcache_sim_miss[i][j];
+                    total_subcache_sim_access += uncore.LLC.subcache_sim_access[i][j];
+                    total_sim_miss += uncore.LLC.sim_miss[i][j];
+                    total_sim_access += uncore.LLC.sim_access[i][j];
+                }
+                double crit_miss_perc = (total_subcache_sim_miss / total_subcache_sim_access) * 100;
+                double noncrit_miss_perc = (total_sim_miss / total_sim_access) * 100;
+                
+                if (500 * (crit_miss_perc - prev_crit_miss_perc[i]) + (noncrit_miss_perc - prev_noncrit_miss_perc[i]) > 1) {
+                    uncore.LLC.SUBCACHE_WAYS_PER_SET = (uncore.LLC.SUBCACHE_WAYS_PER_SET == 1) ? 1 : uncore.LLC.SUBCACHE_WAYS_PER_SET - 1;
+                }
+                else if (500 * (crit_miss_perc - prev_crit_miss_perc[i]) + (noncrit_miss_perc - prev_noncrit_miss_perc[i]) < -1) {
+                    uncore.LLC.SUBCACHE_WAYS_PER_SET = (uncore.LLC.SUBCACHE_WAYS_PER_SET == uncore.LLC.NUM_SET) ? uncore.LLC.NUM_SET : uncore.LLC.SUBCACHE_WAYS_PER_SET + 1;
+                }
+                prev_crit_miss_perc[i] = crit_miss_perc;
+                prev_noncrit_miss_perc[i] = noncrit_miss_perc;
             }
 
             if (all_simulation_complete == NUM_CPUS)
